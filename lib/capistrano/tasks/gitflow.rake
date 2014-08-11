@@ -174,6 +174,34 @@ git push origin #{local_branch}
 
     set :branch, new_production_tag
   end
+
+  desc "Write commit log as release note"
+  task :write_release_note do
+    on roles(:app) do
+
+      last_tag = second_last_tag = nil
+      if stage == :staging
+        last_tag = last_staging_tag
+        second_last_tag = last_staging_tag(true)
+      else
+        last_tag = last_production_tag
+        second_last_tag = last_production_tag(true)
+      end
+
+      commits = `git log --pretty=format:"%h %s (%an)" #{second_last_tag}...#{last_tag}`
+
+      release_note = <<-TEXT
+Date: #{Time.now}
+Tag: #{last_tag}
+
+Commits:
+#{commits}
+TEXT
+
+      release_note_path = "#{release_path}/public/release_note.txt"
+      execute :echo, "'#{release_note}'", '>', release_note_path
+    end
+  end
 end
 
 namespace :deploy do
@@ -186,3 +214,4 @@ end
 
 before "deploy:updating", "gitflow:calculate_tag"
 before "gitflow:calculate_tag", "gitflow:verify_up_to_date"
+after  "deploy:updated", "gitflow:write_release_note"
