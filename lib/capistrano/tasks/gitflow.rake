@@ -2,21 +2,21 @@ require 'capistrano/gitflow/natcmp'
 require 'stringex'
 
 namespace :gitflow do
-  def last_tag_matching(pattern)
+  def last_tag_matching(pattern,second_to_last=nil)
     matching_tags = `git tag -l '#{pattern}'`.split
     matching_tags.sort! do |a,b|
       String.natcmp(b, a, true)
     end
 
     last_tag = if matching_tags.length > 0
-                 matching_tags[0]
+                 second_to_last ? matching_tags[1] : matching_tags[0]
                else
                  nil
                end
   end
 
-  def last_staging_tag()
-    last_tag_matching('staging-*')
+  def last_staging_tag(second_to_last=nil)
+    last_tag_matching('staging-*',second_to_last)
   end
 
   def next_staging_tag
@@ -32,8 +32,8 @@ namespace :gitflow do
     "#{stage}-#{hwhen}-#{new_tag_serial}"
   end
 
-  def last_production_tag()
-    last_tag_matching('production-*')
+  def last_production_tag(second_to_last=nil)
+    last_tag_matching('production-*',second_to_last)
   end
 
   def using_git?
@@ -74,7 +74,7 @@ git push origin #{local_branch}
       `git fetch`
 
       unless Rake::Task["gitflow:tag_#{stage}"].nil?
-        invoke "gitflow:tag_#{stage}" 
+        invoke "gitflow:tag_#{stage}"
 
         system "git push --tags origin #{local_branch}"
         if $? != 0
@@ -93,9 +93,9 @@ git push origin #{local_branch}
                else
                  abort "Unsupported stage #{stage}"
                end
-    
+
     to_tag = ENV['TAG']
-    to_tag ||= begin 
+    to_tag ||= begin
                  puts "Calculating 'end' tag for :commit_log for '#{stage}'"
                  to_tag = if stage == :production
                             last_staging_tag
