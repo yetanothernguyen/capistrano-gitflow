@@ -197,10 +197,10 @@ Tag: #{last_tag}
 Commits:
 #{commits}
 TEXT
-      release_note.gsub!("'","")
+      release_note.gsub!("'’","")
       release_note.force_encoding("ASCII-8BIT")
       release_note_path = "#{release_path}/public/release_note.txt"
-      execute :echo, "'#{release_note}'", '>', release_note_path
+      # execute :echo, "'#{release_note}'", '>', release_note_path
     end
   end
 end
