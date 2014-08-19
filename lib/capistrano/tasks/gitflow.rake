@@ -52,7 +52,8 @@ namespace :gitflow do
     # This is a commit message [Finishes #77090594]
     stories = []
     commits.split("\n").each do |commit|
-      stories << commit[/\[.+#([0-9]+)\]/, 1]
+      id = commit[/\[.+#([0-9]+)\]/, 1]
+      stories << id unless id.nil?
     end
 
     unless stories.empty? || fetch(:pivotal_tracker_token).nil? || fetch(:pivotal_tracker_project_id).nil?
@@ -195,7 +196,6 @@ git push origin #{local_branch}
   desc "Write commit log as release note"
   task :write_release_note do
     on roles(:app) do
-
       last_tag = second_last_tag = nil
       if stage == :staging
         last_tag = last_staging_tag
