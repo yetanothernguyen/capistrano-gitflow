@@ -48,6 +48,23 @@ namespace :gitflow do
     fetch(:local_branch)
   end
 
+  def deliver_stories(commits)
+    # This is a commit message [Finishes #77090594]
+    stories = []
+    commits.split("\n").each do |commit|
+      stories << commit[/\[.+#([0-9]+)\]/, 1]
+    end
+
+    unless stories.empty? || fetch(:pivotal_tracker_token).nil? || fetch(:pivotal_tracker_project_id).nil?
+      PivotalTracker::Client.token = fetch(:pivotal_tracker_token)
+      project = PivotalTracker::Project.find(fetch(:pivotal_tracker_project_id))
+      stories.each do |story_id|
+        story = project.stories.find(story_id)
+        story.update(current_state: 'delivered') if story && story.current_state == 'finished'
+      end
+    end
+  end
+
   task :verify_up_to_date do
     if using_git?
       set :local_branch, `git branch --no-color 2> /dev/null | sed -e '/^[^*]/d'`.gsub(/\* /, '').chomp
@@ -189,7 +206,7 @@ git push origin #{local_branch}
       end
 
       commits = `git log --pretty=format:"%h %s (%an)" #{second_last_tag}...#{last_tag}`
-
+      deliver_stories(commits)
       release_note = <<-TEXT
 Date: #{Time.now}
 Tag: #{last_tag}
@@ -200,7 +217,7 @@ TEXT
       release_note.gsub!("'’","")
       release_note.force_encoding("ASCII-8BIT")
       release_note_path = "#{release_path}/public/release_note.txt"
-      # execute :echo, "'#{release_note}'", '>', release_note_path
+      execute :echo, "'#{release_note}'", '>', release_note_path
     end
   end
 end
